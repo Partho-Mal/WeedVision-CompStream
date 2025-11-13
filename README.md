@@ -1,4 +1,4 @@
-# 🌱 WeedIoT — Precision Farming Simulator
+# 🌱 WeedVision-CompStream - Precision Farming Simulator
 
 WeedIoT is a precision farming simulation project that demonstrates **weed detection**, **multi-drone data transmission**, **compression**, and **farm-wide aggregation** using **image processing**, **NDVI/color segmentation**, and **IoT protocols** (HTTP & MQTT).
 
