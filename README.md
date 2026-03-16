@@ -164,3 +164,15 @@ net stop mosquitto
 ---
 
 These commands allow you to control the Mosquitto MQTT broker in your project, enabling communication between drones and the central server.
+
+---
+
+## 🖼️ Application Screenshots
+
+| 1. Upload & Configure | 2. Segmentation Result | 3. Drone Simulation |
+| :---: | :---: | :---: |
+| ![Step 1](./results/images/1.png) | ![Step 2](./results/images/2.png) | ![Step 3](./results/images/3.png) |
+
+| 4. Transmission Status | 5. Aggregated Heatmap | 6. Performance Metrics |
+| :---: | :---: | :---: |
+| ![Step 4](./results/images/4.png) | ![Step 5](./results/images/5.png) | ![Step 6](./results/images/6.png) |

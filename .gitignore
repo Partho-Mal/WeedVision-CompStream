@@ -124,3 +124,6 @@ Desktop.ini
 
 # VSCode Python cache
 .pytype/
+
+results/aggregated.json
+!results/images/
