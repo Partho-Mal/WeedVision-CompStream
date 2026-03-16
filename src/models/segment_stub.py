@@ -32,6 +32,9 @@ def segment(img_bgr, method='ndvi', threshold=0.12):
         # Note: This doesn't distinguish crops from weeds!
         ndvi = compute_ndvi_from_bgr(img_bgr)
         mask = threshold_mask_from_ndvi(ndvi, thresh=threshold)
+
+        # Inverts the mask (black becomes white, white becomes black)
+        mask = cv2.bitwise_not(mask)
         aux = {'ndvi': ndvi, 'note': 'Detects all vegetation, not just weeds'}
         
     elif method == 'color':
@@ -43,63 +46,43 @@ def segment(img_bgr, method='ndvi', threshold=0.12):
         aux = {'method': 'size_color', 'min_area': min_area, 'max_area': max_area}
         
     elif method == 'texture':
-        # Texture-based weed detection
-        mask = detect_weeds_texture_based(img_bgr)
+        # 🔥 Pass the threshold from the UI slider
+        mask = detect_weeds_texture_based(img_bgr, threshold=threshold)
         aux = {'method': 'texture_based'}
 
     elif method == 'size_filter':
         hsv = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV)
-        lower = np.array([25, 30, 30])
+        
+        # 🔥 TIGHTER GREEN: Ignores dirt/shadows so crops and weeds don't fuse together
+        lower = np.array([30, 40, 40])
         upper = np.array([85, 255, 255])
         mask = cv2.inRange(hsv, lower, upper)
         
+        # 🔥 ERODE: Breaks the physical leaf connections between crops and weeds
         kernel = np.ones((3, 3), np.uint8)
-        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel, iterations=2)
-        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel, iterations=1)
+        mask = cv2.erode(mask, kernel, iterations=2)
         
         contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         filtered_mask = np.zeros_like(mask)
         
-        min_area = 30
-        max_area = 3000
+        # 🔥 FIXED SLIDER: -1.0 to 1.0 now maps to 1 to 500 pixels. 
+        # (2000 was deleting normal weeds before!)
+        slider_mapped = (threshold + 1.0) / 2.0 
+        min_area = max(1, int(slider_mapped * 500)) 
+        
+        # Drops the massive crop rows, keeps the weed clusters
+        max_area = 30000 
+        
         for cnt in contours:
             area = cv2.contourArea(cnt)
             if min_area < area < max_area:
                 cv2.drawContours(filtered_mask, [cnt], -1, 255, -1)
+                
+        # Plump the surviving weeds back up to normal size
+        filtered_mask = cv2.dilate(filtered_mask, kernel, iterations=2)
         
-        # 🔥 normalize here so downstream heatmap works
-        mask = filtered_mask.astype(np.float32) / 255.0
-        
-        aux = {'method': 'size_filtered', 'note': 'normalized 0-1 for heatmap'}
-
-        
-    # elif method == 'size_filter':
-    #     # Enhanced color-based with morphological filtering
-    #     hsv = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV)
-        
-    #     # Broader color range to catch various weed types
-    #     lower = np.array([25, 30, 30])   # Yellow-green to brown weeds
-    #     upper = np.array([85, 255, 255])
-    #     mask = cv2.inRange(hsv, lower, upper)
-        
-    #     # Morphological operations to clean up
-    #     kernel = np.ones((3, 3), np.uint8)
-    #     mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel, iterations=2)
-    #     mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel, iterations=1)
-        
-    #     # Remove very large blobs (likely crops) and very small noise
-    #     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    #     filtered_mask = np.zeros_like(mask)
-        
-    #     min_area = 30
-    #     max_area = 3000
-    #     for cnt in contours:
-    #         area = cv2.contourArea(cnt)
-    #         if min_area < area < max_area:
-    #             cv2.drawContours(filtered_mask, [cnt], -1, 255, -1)
-        
-    #     mask = filtered_mask
-    #     aux = {'hsv': hsv, 'method': 'size_filtered'}
+        mask = filtered_mask
+        aux = {'method': 'size_filtered', 'min_area': min_area, 'max_area': max_area}
     
     else:
         raise ValueError(f"Unknown method: {method}. Use 'ndvi', 'color', 'texture', or 'size_filter'")

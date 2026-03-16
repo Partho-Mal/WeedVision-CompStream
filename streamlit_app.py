@@ -78,9 +78,12 @@ with col_left:
         help="Select the segmentation approach for weed detection."
     )
 
+    # Set default to 0.0 for NDVI, otherwise 0.12
+    default_thresh = 0.0 if method == "ndvi" else 0.12
+
     threshold = st.slider(
         "Segmentation threshold",
-        0.0, 1.0, 0.12, 0.01,
+        -1.0, 1.0, default_thresh, 0.01, # Expanded range to -1.0 for NDVI
         help="Lower = more sensitive (detects smaller weeds)."
     )
 
@@ -126,7 +129,8 @@ with col_right:
 
         # Resize for consistent display
         h, w = img.shape[:2]
-        max_side = 512
+        max_side = 768
+        # max_side = 512
         if max(h, w) > max_side:
             scale = max_side / max(h, w)
             img = cv2.resize(img, (int(w * scale), int(h * scale)))
@@ -171,6 +175,18 @@ with col_right:
 # ======================================
 with col_left:
     if run_btn:
+# 🔥 CLEAR OLD LOCAL FILE
+        if agg_path.exists():
+            agg_path.unlink()
+            
+        # 🔥 WIPE FLASK SERVER MEMORY
+        import requests
+        try:
+            # Adjust the port if your Flask server isn't on 5000
+            requests.post("http://127.0.0.1:5000/reset", timeout=2)
+        except Exception as e:
+            st.warning("Could not clear server memory. Ensure the /reset route is added to Flask.")
+
         st.info("🛰️ Simulating all drones...")
 
         # Run all at once (no per-drone loop)
@@ -289,12 +305,28 @@ with col_left:
             st.subheader("🌍 Updated Farm-wide Heatmap")
             agg_np = np.array(agg_data)
             fig_updated, ax_updated = plt.subplots(figsize=(5, 4))
-            cax = ax_updated.matshow(agg_np, cmap="Greens")
+            # cax = ax_updated.matshow(agg_np, cmap="Greens")
+            # ax_updated.set_title("Updated Aggregated Weed Density", pad=10)
+
+            # 🔥 Forcing the scale to 0.0 - 1.0 so the heatmap colormap works properly
+            cax = ax_updated.matshow(agg_np, cmap="Greens", vmin=0.0, vmax=1.0)
+            
             ax_updated.set_title("Updated Aggregated Weed Density", pad=10)
             ax_updated.axis('off')
-            fig_updated.colorbar(cax, label="Weed Density (0–1)")
+
+            # fig_updated.colorbar(cax, label="Weed Density (0–1)")
+            # st.pyplot(fig_updated)
+            # plt.close(fig_updated)
+
+
+            # Add a colorbar to explain the density
+            cbar = fig_updated.colorbar(cax, ax=ax_updated, fraction=0.046, pad=0.04)
+            cbar.set_label('Weed Density (Darker = Higher)', rotation=270, labelpad=15)
+            
             st.pyplot(fig_updated)
             plt.close(fig_updated)
+            
+            st.caption("🟢 **Note:** Darker green areas indicate a higher concentration of detected weeds.")
         else:
             st.warning("No aggregation data found. Ensure Flask server is running.")
 

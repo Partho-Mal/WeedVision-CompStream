@@ -50,11 +50,10 @@ def upload_image():
     data = request.get_json()
     if not data or "image_base64" not in data:
         return jsonify({"error": "no image provided"}), 400
-
+    
     import cv2
     import base64
     import numpy as np
-    from io import BytesIO
 
     # Decode base64
     img_bytes = base64.b64decode(data["image_base64"])
@@ -76,6 +75,13 @@ def upload_image():
 
     return jsonify({"status": "ok"}), 200
 
+
+@app.route('/reset', methods=['POST'])
+def reset_data():
+    """Wipes the server memory so old runs don't bleed into new runs."""
+    global RECENT
+    RECENT.clear() 
+    return {"status": "memory cleared"}, 200
 
 @app.route("/")
 def home():
