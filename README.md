@@ -83,7 +83,6 @@ python src/server.py
 
 # 5. Installation & Usage
 
-> USE PYTHON VERSION >=3.12.x
 
 ###  1. Clone repository:
 
@@ -91,6 +90,8 @@ python src/server.py
 git clone <repo-url>
 cd WeedIoT
 ```
+
+## USE PYTHON VERSION <=3.12.x
 
 ### 2. Install dependencies:
 
